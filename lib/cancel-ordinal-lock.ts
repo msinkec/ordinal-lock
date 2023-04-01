@@ -1,4 +1,4 @@
-import { Address, Bn, KeyPair, Script, Sig, Tx } from "@ts-bitcoin/core"
+import { Address, Bn, KeyPair, OpCode, Script, Sig, Tx } from "@ts-bitcoin/core"
 import { Buffer } from "buffer"
 import { UTXO } from "./models"
 
@@ -34,6 +34,7 @@ export function cancelOrderLockTx(lockUtxo: UTXO, paymentUtxo: UTXO, ownerKp: Ke
         new Script()
             .writeBuffer(sig.toTxFormat())
             .writeBuffer(ownerKp.pubKey.toBuffer())
+            .writeOpCode(OpCode.OP_1)
     )
 
     // Add payment as second input

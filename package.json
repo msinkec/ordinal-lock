@@ -19,5 +19,9 @@
   "dependencies": {
     "@ts-bitcoin/core": "^2.2.0",
     "buffer": "^6.0.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.3"
   }
 }
