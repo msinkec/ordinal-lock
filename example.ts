@@ -1,4 +1,4 @@
-import { Address, Bn, KeyPair, OpCode, PrivKey, Script, Sig, Tx, TxOut } from "@ts-bitcoin/core"
+import { Address, Bn, KeyPair, PrivKey, TxOut } from "@ts-bitcoin/core"
 import { UTXO } from "./lib/models"
 import { createOrderLockTx } from "./lib/create-ordinal-lock";
 import { cancelOrderLockTx } from "./lib/cancel-ordinal-lock";
