@@ -22,13 +22,13 @@ export class OrdinalLock extends SmartContract {
     constructor(seller: PubKeyHash, payOutput: ByteString) {
         super(...arguments)
 
-        this.seller = seller;
-        this.payOutput = payOutput;
+        this.seller = seller
+        this.payOutput = payOutput
     }
 
-    @method(SigHash.ANYONECANPAY_ALL)
-    public purchase(selfOutput: ByteString, trailingOutputs: ByteString) {
-        assert(hash256(selfOutput + this.payOutput + trailingOutputs) == this.ctx.hashOutputs)
+    @method(SigHash.ANYONECANPAY_SINGLE)
+    public purchase() {
+        assert(hash256(this.payOutput) == this.ctx.hashOutputs)
     }
 
     @method()
