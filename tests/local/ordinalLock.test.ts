@@ -4,15 +4,15 @@ import {
     bsv,
     PubKeyHash,
     Utils,
-    Ripemd160,
     findSig,
     PubKey,
     hash160,
+    ByteString,
 } from 'scrypt-ts'
 import { OrdinalLock } from '../../src/contracts/ordinalLock'
 import { getDummySigner, getDummyUTXO } from './utils/txHelper'
 import chaiAsPromised from 'chai-as-promised'
-import { bindInscription, purchaseTxBuilder } from '../../src/util'
+import { purchaseTxBuilder } from '../../src/util'
 use(chaiAsPromised)
 
 // Listing price.
@@ -23,7 +23,7 @@ const seller = bsv.PrivateKey.fromRandom(bsv.Networks.testnet)
 
 // Output that will pay the seller.
 const payOutput = Utils.buildPublicKeyHashOutput(
-    Ripemd160(seller.toAddress().toHex()),
+    hash160(seller.publicKey.toHex()),
     price
 )
 
@@ -44,10 +44,26 @@ describe('Test SmartContract `OrdinalLock`', () => {
 
     it('should pass purchase method call successfully.', async () => {
         const buyerSigner = getDummySigner()
-        const { tx: callTx, atInputIndex } = await instance.methods.purchase({
-            fromUTXO: getDummyUTXO(),
-            changeAddress: await buyerSigner.getDefaultAddress(),
-        } as MethodCallOptions<OrdinalLock>)
+
+        const inscriptionScript = bsv.Script.fromASM(
+            'OP_FALSE OP_IF 6f7264 OP_TRUE 746578742f706c61696e OP_FALSE 48656c6c6f2c2073437279707421 OP_ENDIF'
+        )
+        const destOutput = new bsv.Transaction.Output({
+            script: inscriptionScript,
+            satoshis: 1,
+        })
+        const destOutputStr = destOutput
+            .toBufferWriter()
+            .toBuffer()
+            .toString('hex')
+
+        const { tx: callTx, atInputIndex } = await instance.methods.purchase(
+            destOutputStr,
+            {
+                fromUTXO: getDummyUTXO(),
+                changeAddress: await buyerSigner.getDefaultAddress(),
+            } as MethodCallOptions<OrdinalLock>
+        )
         const result = callTx.verifyScript(atInputIndex)
         expect(result.success, result.error).to.eq(true)
     })
@@ -68,21 +84,41 @@ describe('Test SmartContract `OrdinalLock`', () => {
 
     it('should fail purchase method w wrong payment out.', async () => {
         const wrongPayOutput = Utils.buildPublicKeyHashOutput(
-            Ripemd160(bsv.PrivateKey.fromRandom().toAddress().toHex()),
+            hash160(bsv.PrivateKey.fromRandom().publicKey.toHex()),
             price
         )
+
+        const inscriptionScript = bsv.Script.fromASM(
+            'OP_FALSE OP_IF 6f7264 OP_TRUE 746578742f706c61696e OP_FALSE 48656c6c6f2c2073437279707421 OP_ENDIF'
+        )
+        const destOutput = new bsv.Transaction.Output({
+            script: inscriptionScript,
+            satoshis: 1,
+        })
+        const destOutputStr = destOutput
+            .toBufferWriter()
+            .toBuffer()
+            .toString('hex')
+
         instance.bindTxBuilder(
             'purchase',
             (
                 current: OrdinalLock,
-                options: MethodCallOptions<OrdinalLock>
+                options: MethodCallOptions<OrdinalLock>,
+                destOutput: ByteString
             ): Promise<any> => {
+                const destOutputBR = new bsv.encoding.BufferReader(
+                    Buffer.from(destOutput, 'hex')
+                )
                 const payOutputBR = new bsv.encoding.BufferReader(
                     Buffer.from(wrongPayOutput, 'hex')
                 )
 
                 const unsignedTx: bsv.Transaction = new bsv.Transaction()
                     .addInput(current.buildContractInput(options.fromUTXO))
+                    .addOutput(
+                        bsv.Transaction.Output.fromBufferReader(destOutputBR)
+                    )
                     .addOutput(
                         bsv.Transaction.Output.fromBufferReader(payOutputBR)
                     )
@@ -102,7 +138,7 @@ describe('Test SmartContract `OrdinalLock`', () => {
         const buyerSigner = getDummySigner()
 
         return expect(
-            instance.methods.purchase({
+            instance.methods.purchase(destOutputStr, {
                 fromUTXO: getDummyUTXO(),
                 changeAddress: await buyerSigner.getDefaultAddress(),
             } as MethodCallOptions<OrdinalLock>)

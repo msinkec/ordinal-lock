@@ -4,7 +4,6 @@ import {
     bsv,
     TestWallet,
     DefaultProvider,
-    Ripemd160,
     Utils,
     hash160,
     PubKeyHash,
@@ -35,7 +34,7 @@ async function main() {
 
     // Output that will pay the seller (you).
     const payOutput = Utils.buildPublicKeyHashOutput(
-        Ripemd160(privateKey.publicKey.toHex()),
+        hash160(privateKey.publicKey.toHex()),
         price
     )
 

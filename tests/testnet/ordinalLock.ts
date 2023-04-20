@@ -3,14 +3,13 @@ import { getDefaultSigner, inputSatoshis } from './utils/txHelper'
 import {
     bsv,
     Utils,
-    Ripemd160,
     PubKeyHash,
     hash160,
     MethodCallOptions,
     findSig,
     PubKey,
 } from 'scrypt-ts'
-import { myAddress, myPublicKey } from '../utils/privateKey'
+import { myPublicKey } from '../utils/privateKey'
 import {
     bindInscription,
     purchaseTxBuilder,
@@ -22,7 +21,7 @@ const price = 10000n
 
 // Output that will pay the seller.
 const payOutput = Utils.buildPublicKeyHashOutput(
-    Ripemd160(myAddress.toHex()),
+    hash160(myPublicKey.toHex()),
     price
 )
 
@@ -62,7 +61,20 @@ async function callPurchase(deployTXID: string) {
     // Bind tx builder for public method "purchase"
     instance.bindTxBuilder('purchase', purchaseTxBuilder)
 
-    const { tx } = await instance.methods.purchase()
+    // Construct dest output w inscription
+    const destInscription = bsv.Script.fromASM(
+        'OP_FALSE OP_IF 6f7264 OP_TRUE 746578742f706c61696e OP_FALSE 48656c6c6f2c2073437279707421 OP_ENDIF'
+    )
+    const destOutput = new bsv.Transaction.Output({
+        script: destInscription,
+        satoshis: 1,
+    })
+    const destOutputStr = destOutput.toBufferWriter().toBuffer().toString('hex')
+
+    // Call public method "purchase"
+    const { tx } = await instance.methods.purchase(destOutputStr, {
+        changeAddress: await signer.getDefaultAddress(),
+    } as MethodCallOptions<OrdinalLock>)
     console.log('"purchase" method called: ', tx.id)
 
     return tx.id

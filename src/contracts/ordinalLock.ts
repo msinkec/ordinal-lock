@@ -26,9 +26,12 @@ export class OrdinalLock extends SmartContract {
         this.payOutput = payOutput
     }
 
-    @method(SigHash.ANYONECANPAY_SINGLE)
-    public purchase() {
-        assert(hash256(this.payOutput) == this.ctx.hashOutputs)
+    @method(SigHash.ANYONECANPAY_ALL)
+    public purchase(destOutput: ByteString) {
+        assert(
+            hash256(destOutput + this.payOutput + this.buildChangeOutput()) ==
+                this.ctx.hashOutputs
+        )
     }
 
     @method()

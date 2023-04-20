@@ -1,5 +1,5 @@
 import { OrdinalLock } from './contracts/ordinalLock'
-import { bsv, UTXO, MethodCallOptions, Provider } from 'scrypt-ts'
+import { bsv, UTXO, MethodCallOptions, Provider, ByteString } from 'scrypt-ts'
 
 // Override default deployment transaction builder to include inscription.
 // See:
@@ -40,14 +40,19 @@ export function bindInscription(
 
 export function purchaseTxBuilder(
     current: OrdinalLock,
-    options: MethodCallOptions<OrdinalLock>
+    options: MethodCallOptions<OrdinalLock>,
+    destOutput: ByteString
 ): Promise<any> {
+    const destOutputBR = new bsv.encoding.BufferReader(
+        Buffer.from(destOutput, 'hex')
+    )
     const payOutputBR = new bsv.encoding.BufferReader(
         Buffer.from(current.payOutput, 'hex')
     )
 
     const unsignedTx: bsv.Transaction = new bsv.Transaction()
         .addInput(current.buildContractInput(options.fromUTXO))
+        .addOutput(bsv.Transaction.Output.fromBufferReader(destOutputBR))
         .addOutput(bsv.Transaction.Output.fromBufferReader(payOutputBR))
 
     if (options.changeAddress) {
